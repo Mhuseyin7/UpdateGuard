@@ -1,0 +1,7 @@
+.env
+data/
+bin/
+web/node_modules/
+web/.next/
+web/.npm-cache/
+web/tsconfig.tsbuildinfo
