@@ -106,6 +106,9 @@ Detaylar için [ARCHITECTURE.md](ARCHITECTURE.md) dosyasını inceleyin.
 ### Local development
 
 ```bash
+cp .env.example .env
+# Set UPDATEGUARD_AGENT_TOKEN to a long, random value in .env.
+
 go test ./...
 
 cd web

@@ -9,10 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: "1.23.x" }
-      # Normalize Go source before static analysis. The test/build steps then run against
-      # the canonical gofmt representation, including contributions made on Windows.
-      - run: gofmt -w $(find . -name '*.go')
+        with: { go-version: "1.23.x", cache: false }
+      - run: test -z "$(gofmt -l $(find . -name '*.go'))"
       - run: go vet ./...
       - run: go test -race ./...
       - run: docker build -f Dockerfile.control-plane .
