@@ -43,6 +43,19 @@ func main() {
 		}
 		writeJSON(w, services)
 	})
+	mux.HandleFunc("/v1/services/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || !strings.HasSuffix(r.URL.Path, "/snapshot") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		id := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/v1/services/"), "/snapshot")
+		snapshot, err := engine.Snapshot(r.Context(), id)
+		if err != nil {
+			http.Error(w, "snapshot failed", http.StatusBadGateway)
+			return
+		}
+		writeJSON(w, snapshot)
+	})
 	mux.HandleFunc("/v1/images/pull", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)

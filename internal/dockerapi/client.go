@@ -79,6 +79,27 @@ func (c *Client) Pull(ctx context.Context, reference string) error {
 	return err
 }
 
+// Snapshot records the immutable image identifier and non-secret deployment
+// metadata before any service mutation. Secrets are never copied to this type.
+func (c *Client) Snapshot(ctx context.Context, containerID string) (domain.Snapshot, error) {
+	if containerID == "" {
+		return domain.Snapshot{}, fmt.Errorf("container ID is required")
+	}
+	var inspect struct {
+		Image   string `json:"Image"`
+		Config struct {
+			Image string `json:"Image"`
+		} `json:"Config"`
+		HostConfig struct {
+			Binds []string `json:"Binds"`
+		} `json:"HostConfig"`
+	}
+	if err := c.request(ctx, http.MethodGet, "/containers/"+url.PathEscape(containerID)+"/json", &inspect); err != nil {
+		return domain.Snapshot{}, err
+	}
+	return domain.Snapshot{ImageRef: inspect.Config.Image, Digest: inspect.Image, Volumes: inspect.HostConfig.Binds, CreatedAt: time.Now().UTC()}, nil
+}
+
 type containerSummary struct {
 	ID      string            `json:"Id"`
 	Image   string            `json:"Image"`
