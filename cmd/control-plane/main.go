@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/updateguard/updateguard/internal/agent"
 	"github.com/updateguard/updateguard/internal/domain"
 	"github.com/updateguard/updateguard/internal/store"
 	"log"
@@ -11,6 +12,7 @@ import (
 
 func main() {
 	db := store.NewMemory()
+	agentClient := agent.HTTPClient{BaseURL: os.Getenv("UPDATEGUARD_AGENT_URL"), Token: os.Getenv("UPDATEGUARD_AGENT_TOKEN")}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -22,6 +24,22 @@ func main() {
 	})
 	mux.HandleFunc("/api/v1/dashboard", func(w http.ResponseWriter, _ *http.Request) {
 		write(w, map[string]int{"services": 0, "up_to_date": 0, "updates_available": 0, "failed_updates": 0})
+	})
+	mux.HandleFunc("/api/v1/services", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if agentClient.BaseURL == "" || agentClient.Token == "" {
+			http.Error(w, "docker agent is not configured", http.StatusServiceUnavailable)
+			return
+		}
+		services, err := agentClient.Discover(r.Context())
+		if err != nil {
+			http.Error(w, "docker agent unavailable", http.StatusBadGateway)
+			return
+		}
+		write(w, services)
 	})
 	mux.HandleFunc("/api/v1/audit", func(w http.ResponseWriter, r *http.Request) { write(w, db.Audit(r.Context())) })
 	mux.HandleFunc("/api/v1/update-states", func(w http.ResponseWriter, _ *http.Request) {

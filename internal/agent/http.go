@@ -16,6 +16,10 @@ type HTTPClient struct {
 }
 
 func (c HTTPClient) call(ctx context.Context, method, path string, in, out any) error {
+	client := c.Client
+	if client == nil {
+		client = http.DefaultClient
+	}
 	var body *bytes.Reader
 	if in != nil {
 		raw, err := json.Marshal(in)
@@ -32,7 +36,7 @@ func (c HTTPClient) call(ctx context.Context, method, path string, in, out any) 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.Token)
 	req.Header.Set("Content-Type", "application/json")
-	r, err := c.Client.Do(req)
+	r, err := client.Do(req)
 	if err != nil {
 		return err
 	}
