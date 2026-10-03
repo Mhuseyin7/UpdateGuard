@@ -58,7 +58,7 @@ func (e Executor) Run(ctx context.Context, j domain.UpdateJob) domain.UpdateJob 
 		return j
 	}
 	// A pull failure has not modified the running workload, so it is a safe failure—not a rollback.
-	if err := e.Agent.Pull(ctx, j.Target.Digest); err != nil {
+	if err := e.Agent.Pull(ctx, j.Target.ImageRef); err != nil {
 		j.Failure = "pull: " + err.Error()
 		_ = e.move(ctx, &j, domain.Failed)
 		e.audit(ctx, "UPDATE_FAILED", j.ID)

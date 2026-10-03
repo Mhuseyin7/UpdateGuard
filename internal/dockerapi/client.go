@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -54,6 +55,28 @@ func (c *Client) request(ctx context.Context, method, path string, out any) erro
 
 func (c *Client) Ping(ctx context.Context) error {
 	return c.request(ctx, http.MethodGet, "/_ping", nil)
+}
+
+// Pull fetches exactly the image reference chosen by the planner. The caller
+// must resolve and record its digest before this operation is allowed.
+func (c *Client) Pull(ctx context.Context, reference string) error {
+	if reference == "" {
+		return fmt.Errorf("image reference is required")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://docker/images/create?fromImage="+url.QueryEscape(reference), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("docker image pull: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("docker image pull %s: %s", reference, resp.Status)
+	}
+	_, err = io.Copy(io.Discard, resp.Body)
+	return err
 }
 
 type containerSummary struct {

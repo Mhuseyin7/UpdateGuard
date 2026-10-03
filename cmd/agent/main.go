@@ -43,6 +43,24 @@ func main() {
 		}
 		writeJSON(w, services)
 	})
+	mux.HandleFunc("/v1/images/pull", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var request struct {
+			Reference string `json:"reference"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&request); err != nil || request.Reference == "" {
+			http.Error(w, "image reference is required", http.StatusBadRequest)
+			return
+		}
+		if err := engine.Pull(r.Context(), request.Reference); err != nil {
+			http.Error(w, "image pull failed", http.StatusBadGateway)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 
 	addr := os.Getenv("UPDATEGUARD_AGENT_LISTEN_ADDR")
 	if addr == "" {

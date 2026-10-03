@@ -44,6 +44,9 @@ func (c HTTPClient) call(ctx context.Context, method, path string, in, out any) 
 	if r.StatusCode >= 300 {
 		return fmt.Errorf("agent %s: %s", path, r.Status)
 	}
+	if r.StatusCode == http.StatusNoContent {
+		return nil
+	}
 	return json.NewDecoder(r.Body).Decode(out)
 }
 func (c HTTPClient) Discover(ctx context.Context) ([]domain.Service, error) {
@@ -57,8 +60,8 @@ func (c HTTPClient) Snapshot(ctx context.Context, id string) (domain.Snapshot, e
 func (c HTTPClient) Preflight(ctx context.Context, id string, t domain.Snapshot) error {
 	return c.call(ctx, "POST", "/v1/services/"+id+"/preflight", t, &struct{}{})
 }
-func (c HTTPClient) Pull(ctx context.Context, d string) error {
-	return c.call(ctx, "POST", "/v1/images/pull", map[string]string{"digest": d}, &struct{}{})
+func (c HTTPClient) Pull(ctx context.Context, reference string) error {
+	return c.call(ctx, "POST", "/v1/images/pull", map[string]string{"reference": reference}, &struct{}{})
 }
 func (c HTTPClient) Recreate(ctx context.Context, id string, s domain.Snapshot) error {
 	return c.call(ctx, "POST", "/v1/services/"+id+"/recreate", s, &struct{}{})
