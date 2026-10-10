@@ -4,10 +4,12 @@ package main
 
 import (
 	"encoding/json"
+	"crypto/subtle"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/updateguard/updateguard/internal/dockerapi"
 )
@@ -80,7 +82,14 @@ func main() {
 		addr = ":8081"
 	}
 	log.Printf("UpdateGuard restricted agent listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, requireToken(token, mux)))
+	log.Fatal((&http.Server{
+		Addr:              addr,
+		Handler:           requireToken(token, mux),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}).ListenAndServe())
 }
 
 func requireToken(token string, next http.Handler) http.Handler {
@@ -89,8 +98,9 @@ func requireToken(token string, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") ||
-			strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ") != token {
+			subtle.ConstantTimeCompare([]byte(provided), []byte(token)) != 1 {
 			http.Error(w, "agent authentication required", http.StatusUnauthorized)
 			return
 		}

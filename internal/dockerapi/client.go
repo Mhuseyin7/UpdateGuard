@@ -60,8 +60,8 @@ func (c *Client) Ping(ctx context.Context) error {
 // Pull fetches exactly the image reference chosen by the planner. The caller
 // must resolve and record its digest before this operation is allowed.
 func (c *Client) Pull(ctx context.Context, reference string) error {
-	if reference == "" {
-		return fmt.Errorf("image reference is required")
+	if !strings.Contains(reference, "@sha256:") {
+		return fmt.Errorf("image reference must be pinned to a sha256 digest")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://docker/images/create?fromImage="+url.QueryEscape(reference), nil)
 	if err != nil {
