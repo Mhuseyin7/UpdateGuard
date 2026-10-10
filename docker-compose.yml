@@ -30,6 +30,16 @@ services:
     # and mTLS before a production remote-agent release.
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    # Docker socket access is root-equivalent host authority. Use root only in
+    # this isolated agent; no other UpdateGuard service receives this mount.
+    user: "0:0"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16m
     environment:
       UPDATEGUARD_AGENT_TOKEN: ${UPDATEGUARD_AGENT_TOKEN:?Copy .env.example to .env and set UPDATEGUARD_AGENT_TOKEN}
     expose:

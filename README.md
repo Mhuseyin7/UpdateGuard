@@ -128,6 +128,8 @@ Ardından:
 
 > Docker socket mount yalnızca agent service içindir. Agent port'unu internete publish etmeyin ve Docker TCP port'unu public olarak açmayın.
 
+Agent process'i Docker socket permission nedeniyle `root` olarak çalışır; socket zaten host-level authority verdiğinden bu access yalnızca isolated agent container'a verilmiştir. Web UI ve control plane Docker socket mount etmez.
+
 ## Mevcut durum ve roadmap
 
 Bu repository şu anda güvenlik odaklı bir foundation içerir: lifecycle, immutable plan rules, rollback orchestration, agent boundary, dashboard shell, testler ve deployment skeleton hazırdır.
