@@ -2,9 +2,12 @@ package store
 
 import (
 	"context"
+	"errors"
 	"github.com/updateguard/updateguard/internal/domain"
 	"sync"
 )
+
+var ErrNotFound = errors.New("record not found")
 
 // Store is the persistence seam. Production adapters use SQLite (single-node) or PostgreSQL;
 // the in-memory adapter makes control-plane behaviour testable without a database.
@@ -30,7 +33,11 @@ func (m *Memory) SaveJob(_ context.Context, j domain.UpdateJob) error {
 func (m *Memory) Job(_ context.Context, id string) (domain.UpdateJob, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.jobs[id], nil
+	job, ok := m.jobs[id]
+	if !ok {
+		return domain.UpdateJob{}, ErrNotFound
+	}
+	return job, nil
 }
 func (m *Memory) AppendAudit(_ context.Context, e domain.AuditEvent) error {
 	m.mu.Lock()

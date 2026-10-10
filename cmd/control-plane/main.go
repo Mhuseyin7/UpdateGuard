@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/updateguard/updateguard/internal/agent"
 	"github.com/updateguard/updateguard/internal/domain"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -18,8 +20,17 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		if agentClient.BaseURL == "" || agentClient.Token == "" {
+			http.Error(w, "docker agent is not configured", http.StatusServiceUnavailable)
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		if _, err := agentClient.Discover(ctx); err != nil {
+			http.Error(w, "docker agent unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		_, _ = w.Write([]byte("ready\n"))
 	})
 	mux.HandleFunc("/api/v1/dashboard", func(w http.ResponseWriter, _ *http.Request) {
@@ -50,7 +61,14 @@ func main() {
 		addr = ":8080"
 	}
 	log.Printf("UpdateGuard control plane listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, securityHeaders(mux)))
+	log.Fatal((&http.Server{
+		Addr:              addr,
+		Handler:           securityHeaders(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}).ListenAndServe())
 }
 func write(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
