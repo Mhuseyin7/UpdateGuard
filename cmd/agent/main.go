@@ -87,7 +87,9 @@ func main() {
 		Handler:           requireToken(token, mux),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      60 * time.Second,
+		// A digest-pinned image pull can legitimately take longer than a
+		// generic HTTP response; the authenticated agent is internal-only.
+		WriteTimeout: 0,
 		IdleTimeout:       60 * time.Second,
 	}).ListenAndServe())
 }
